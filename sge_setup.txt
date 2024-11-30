@@ -1,0 +1,53 @@
+https://serverfault.com/questions/322073/howto-set-up-sge-for-cuda-devices/322249#322249
+
+The strategy is actually fairly simple.
+
+Using qconf -mc you can create a complex resource called gpu (or whatever you wish to name it). The resource definition should look something like:
+
+#name               shortcut   type        relop   requestable consumable default  urgency     
+#----------------------------------------------------------------------------------------------
+gpu                 gpu        INT         <=      YES         YES        0        0
+Then you should edit your exec host definitions with qconf -me to set the number of GPUs on exec hosts that have them:
+
+hostname              node001
+load_scaling          NONE
+complex_values        gpu=2
+user_lists            NONE
+xuser_lists           NONE
+projects              NONE
+xprojects             NONE
+usage_scaling         NONE
+report_variables      NONE
+Now that you've set up your exec hosts, you can request gpu resources when submitting jobs. eg: qsub -l gpu=1 and gridengine will keep track of how many GPUs are available.
+
+If you have more than one job running per node that uses a GPU you may want to place your GPUs in to exclusive mode. You can do this with the nvidia-smi utility.
+
+Share
+Improve this answer
+Follow
+answered Oct 17, 2011 at 17:02
+Kamil Kisiel's user avatar
+Kamil Kisiel
+12.4k88 gold badges5050 silver badges7070 bronze badges
+
+Thank you! That definitely helped me get it working so I gladly accept your answer... There's one downside to this solution though... it depends on what the users say they would use. If you can point me to some elegant solution where the gpu resource is actually monitored and the -l parameter is only used to schedule the job instead of also being used to "calculate" how many GPUs are left, that would be great :) – 
+luxifer
+ CommentedOct 18, 2011 at 7:08
+nevermind... I've been able to create a load sensor for this :) – 
+luxifer
+ CommentedOct 18, 2011 at 9:02
+Care to share your load sensor solution? Is there some output of nvidia-smi you can monitor to see how many GPUs are actually in use? or? – 
+Kamil Kisiel
+ CommentedOct 18, 2011 at 20:21
+I've already edited my original question to share that solution... the essence of it is: it only works if you put your GPUs in EXCLUSIVE_THREAD mode... then you'll get the number of used GPUs with the following command: nvidia-smi |grep "Process name" -A 9|grep -v +-|grep -v \|=|grep -v Usage|grep -v "No running"|wc -l – 
+luxifer
+ CommentedOct 19, 2011 at 6:26
+
+You can set the value of "requestable" to be FORCED instead of YES. Then only jobs that specify a value for gpu will be considered to run in the queue. Make sure you set the default to be NONE instead of 0. Also you should just not assign the gpu complex to the non-gpu queue at all. – 
+Kamil Kisiel
+ CommentedJan 11, 2013 at 23:39
+ 
+ ///
+ https://medium.com/@danymukesha/sge-on-ubuntu-servers-2ed6581660be
+ 
+ 
